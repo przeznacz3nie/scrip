@@ -1,0 +1,266 @@
+
+-- Create the loadstring version of the script
+local scriptURL = "https://raw.githubusercontent.com/YourUsername/YourRepo/main/script.lua"
+
+local script = [[
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/jensonhirst/Orion/main/source')))()
+
+local Window = OrionLib:MakeWindow({Name = "Star GUI ⭐", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionTest"})
+
+-- Movement Tab
+local Tab = Window:MakeTab({
+    Name = "Movement",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+Tab:AddSlider({
+    Name = "Speed",
+    Min = 31,
+    Max = 1000,
+    Default = 31,
+    Color = Color3.fromRGB(255,255,255),
+    Increment = 2,
+    ValueName = "Speed",
+    Callback = function(Value)
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
+    end    
+})
+
+Tab:AddSlider({
+    Name = "Jump",
+    Min = 40,
+    Max = 500,
+    Default = 40,
+    Color = Color3.fromRGB(255,255,255),
+    Increment = 2,
+    ValueName = "Jump",
+    Callback = function(Value)
+        game.Players.LocalPlayer.Character.Humanoid.JumpPower = Value
+    end    
+})
+
+local noclipEnabled = false
+Tab:AddToggle({
+    Name = "Noclip",
+    Default = false,
+    Callback = function(Value)
+        noclipEnabled = Value
+        if Value then
+            game:GetService("RunService"):BindToRenderStep("Noclip", 100, function()
+                if game.Players.LocalPlayer.Character then
+                    for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        else
+            game:GetService("RunService"):UnbindFromRenderStep("Noclip")
+            if game.Players.LocalPlayer.Character then
+                for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
+                end
+            end
+        end
+    end
+})
+
+local infJumpEnabled = false
+Tab:AddToggle({
+    Name = "Infinite Jump",
+    Default = false,
+    Callback = function(Value)
+        infJumpEnabled = Value
+    end
+})
+
+game:GetService("UserInputService").JumpRequest:Connect(function()
+    if infJumpEnabled then
+        game.Players.LocalPlayer.Character:FindFirstChild("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+-- Farm Tab
+local FarmTab = Window:MakeTab({
+    Name = "Farm",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+local autoAttackEnabled = false
+FarmTab:AddToggle({
+    Name = "AutoAttack",
+    Default = false,
+    Callback = function(Value)
+        autoAttackEnabled = Value
+        if Value then
+            OrionLib:MakeNotification({
+                Name = "AutoAttack",
+                Content = "AutoAttack Enabled",
+                Image = "rbxassetid://4483345998",
+                Time = 2
+            })
+            spawn(function()
+                while autoAttackEnabled do
+                    game.ReplicatedStorage.Aero.AeroRemoteServices.GameService.WeaponAttackStart:FireServer()
+                    game.ReplicatedStorage.Aero.AeroRemoteServices.GameService.WeaponAnimComplete:FireServer()
+                    wait()
+                end
+            end)
+        else
+            OrionLib:MakeNotification({
+                Name = "AutoAttack",
+                Content = "AutoAttack Disabled",
+                Image = "rbxassetid://4483345998",
+                Time = 2
+            })
+        end
+    end
+})
+
+-- Autofarm Variables
+local autofarmEnabled = false
+local tpspeed = 0.7
+local running = false
+
+FarmTab:AddSlider({
+    Name = "Autofarm Speed",
+    Min = 0.7,
+    Max = 2,
+    Default = 1.1,
+    Color = Color3.fromRGB(255,255,255),
+    Increment = 0.1,
+    ValueName = "Speed",
+    Callback = function(Value)
+        tpspeed = Value
+    end    
+})
+
+local function startAutofarm()
+    if running then return end
+    running = true
+    
+    while autofarmEnabled do
+        for _, v in pairs(workspace.Scene.ResourceNodes1:GetChildren()) do
+            if not autofarmEnabled then break end
+            if v:IsA("Part") and v:FindFirstChild("Prefab") then
+                local tween = game:GetService("TweenService"):Create(
+                    game.Players.LocalPlayer.Character.HumanoidRootPart,
+                    TweenInfo.new(tpspeed),
+                    {CFrame = v.CFrame}
+                )
+                tween:Play()
+                tween.Completed:Connect(function()
+                    local notificationText = ""
+                    if v.NodeType.Value == 1 then 
+                        notificationText = "Exp orb collected"
+                    elseif v.NodeType.Value == 2 then
+                        notificationText = "Coin orb collected"
+                    else
+                        notificationText = "Speed Orb collected"
+                    end
+                    OrionLib:MakeNotification({
+                        Name = "Autofarm",
+                        Content = notificationText,
+                        Image = "rbxassetid://4483345998",
+                        Time = 1
+                    })
+                end)
+                tween.Completed:Wait()
+            end
+        end
+        task.wait(0.1)
+    end
+    running = false
+end
+
+FarmTab:AddToggle({
+    Name = "Autofarm",
+    Default = false,
+    Callback = function(Value)
+        autofarmEnabled = Value
+        if Value then 
+            OrionLib:MakeNotification({
+                Name = "Autofarm",
+                Content = "Autofarm Enabled",
+                Image = "rbxassetid://4483345998",
+                Time = 2
+            })
+            coroutine.wrap(startAutofarm)()
+        else
+            OrionLib:MakeNotification({
+                Name = "Autofarm",
+                Content = "Autofarm Disabled",
+                Image = "rbxassetid://4483345998",
+                Time = 2
+            })
+        end
+    end
+})
+
+-- Egg Tab
+local EggTab = Window:MakeTab({
+    Name = "Egg",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+local autoOpenEnabled = false
+local selectedChest = "Bronze"
+local chestPrices = {
+    Bronze = 2500,
+    Silver = 5000,
+    Gold = 10000
+}
+
+EggTab:AddDropdown({
+    Name = "Select Chest",
+    Default = "Bronze",
+    Options = {"Bronze", "Silver", "Gold"},
+    Callback = function(Value)
+        selectedChest = Value
+    end    
+})
+
+EggTab:AddToggle({
+    Name = "Auto Open/Buy Chest",
+    Default = false,
+    Callback = function(Value)
+        autoOpenEnabled = Value
+        if Value then
+            spawn(function()
+                while autoOpenEnabled and wait(1) do
+                    local player = game.Players.LocalPlayer
+                    if player and player:FindFirstChild("leaderstats") and player.leaderstats:FindFirstChild("Coins") then
+                        local coins = player.leaderstats.Coins.Value
+                        
+                        if coins >= chestPrices[selectedChest] then
+                            local args = {
+                                [1] = selectedChest
+                            }
+                            game:GetService("ReplicatedStorage").Aero.AeroRemoteServices.ChestService.PurchaseChest:FireServer(unpack(args))
+                            game:GetService("ReplicatedStorage").Aero.AeroRemoteServices.ChestService.OpenChest:FireServer(unpack(args))
+                            
+                            OrionLib:MakeNotification({
+                                Name = "Chest System",
+                                Content = selectedChest .. " chest opened!",
+                                Image = "rbxassetid://4483345998",
+                                Time = 1
+                            })
+                        end
+                    end
+                end
+            end)
+        end
+    end    
+})
+
+OrionLib:Init()
+]]
+
+-- Create the loadstring
+loadstring(script)()
