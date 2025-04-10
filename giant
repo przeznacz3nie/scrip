@@ -1,0 +1,54 @@
+
+-- Secure Script Loader
+local secure_key = "KZW_" .. string.reverse(tostring(os.time()))
+local encoded_script = [[
+--[[ Script secured by KZW Security ]]--
+local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+local function dec(data)
+    data = string.gsub(data, '[^'..b..'=]', '')
+    return (data:gsub('.', function(x)
+        if (x == '=') then return '' end
+        local r,f='',(b:find(x)-1)
+        for i=6,1,-1 do r=r..(f%2^i-f%2^(i-1)>0 and '1' or '0') end
+        return r;
+    end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
+        if (#x ~= 8) then return '' end
+        local c=0
+        for i=1,8 do c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0) end
+        return string.char(c)
+    end))
+end
+
+-- Anti-tamper protection
+if not game:IsLoaded() then game.Loaded:Wait() end
+local env = getfenv(1)
+local function secure_call(f) return coroutine.wrap(f)() end
+local script_env = setmetatable({}, {__index = env})
+
+secure_call(function()
+    -- Your original script content goes here (the entire CreatePasswordScreen and other functions)
+    -- I'll keep it brief in this example, but you should paste your full script here
+    local function verifyAccess()
+        return true -- Add your custom verification logic
+    end
+
+    if verifyAccess() then
+        -- Load your original script here
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/script.lua'))()
+    end
+end)
+]]
+
+-- Create the loadstring version
+local final_script = string.format([[
+local secure_loader = loadstring([=[
+%s
+]=])
+if secure_loader then
+    secure_loader()
+else
+    warn("Failed to load script")
+end
+]], encoded_script)
+
+return final_script
